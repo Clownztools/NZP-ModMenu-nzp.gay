@@ -25,6 +25,8 @@
   let message = null;
   let statusDot = null;
   let toastBox = null;
+  let moneyInput = null;
+  let moneySubmit = null;
 
   const engine = () => globalThis.FTEC || null;
   const ready = () => { const f = engine(); return Boolean(f && f.evcb && f.evcb.cbufaddtext != 0); };
@@ -157,6 +159,8 @@
     panel = null;
     message = null;
     statusDot = null;
+    moneyInput = null;
+    moneySubmit = null;
   }
 
   function showPanel() {
@@ -204,6 +208,14 @@
         #cz-nzp .cz-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
         #cz-nzp .cz-grid.three { grid-template-columns: repeat(3, 1fr); }
         #cz-nzp .cz-grid.four { grid-template-columns: repeat(4, 1fr); }
+        #cz-nzp .cz-row { display: flex; gap: 5px; margin-top: 5px; }
+        #cz-nzp .cz-row button { flex: none; }
+        #cz-nzp .cz-input { flex: 1; min-width: 0; min-height: 27px; padding: 5px 8px;
+          border-radius: 6px; outline: none; color: #e7e7e7; background: #161616; border: 1px solid #333;
+          font: 650 10.5px/1.2 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+          transition: border-color .12s, box-shadow .12s; }
+        #cz-nzp .cz-input::placeholder { color: #6f6f6f; font-weight: 500; }
+        #cz-nzp .cz-input:focus { border-color: #ffd400; box-shadow: 0 0 10px #ffd40026; }
         #cz-nzp .cz-button { color: #eaeaea; background: #1d1d1d; border: 1px solid #333; }
         #cz-nzp .cz-button:hover { background: #282828; border-color: #ffd400; color: #ffe45c;
           box-shadow: 0 0 10px #ffd40026; }
@@ -301,7 +313,8 @@
       { label: 'Drop to Menu', command: 'disconnect', confirm: 'End this game and return to the menu?' },
     ])));
 
-    main.append(section('Points', grid([
+    const points = node('div');
+    points.append(grid([
       { label: '+ 500', command: 'cmd addmoney 500' },
       { label: '+ 1,000', command: 'cmd addmoney 1000' },
       { label: '+ 5,000', command: 'cmd addmoney 5000', primary: true },
@@ -310,7 +323,32 @@
       { label: '+ 100,000', command: 'cmd addmoney 100000' },
       { label: '- 5,000', command: 'cmd addmoney -5000' },
       { label: '- 10,000', command: 'cmd addmoney -10000' },
-    ], 4)));
+    ], 4));
+    const customRow = node('div', 'cz-row');
+    const customInput = node('input', 'cz-input');
+    customInput.type = 'text';
+    customInput.placeholder = 'Custom amount (e.g. 25000 or -1000)';
+    customInput.setAttribute('aria-label', 'Custom points amount');
+    const customAdd = node('button', 'cz-button primary', 'Add');
+    customAdd.type = 'button';
+    const submitCustom = () => {
+      const raw = customInput.value.trim().replace(/[,\s]+/g, '');
+      const amount = Number.parseInt(raw, 10);
+      if (!/^[+-]?\d+$/.test(raw) || !Number.isFinite(amount)) {
+        say('Enter a whole number, like 25000 or -1000.', true);
+        customInput.focus();
+        return;
+      }
+      try { run('cmd addmoney ' + amount); } catch (error) { say(error.message, true); }
+      customInput.value = '';
+    };
+    customAdd.addEventListener('click', submitCustom);
+    moneyInput = customInput;
+    moneySubmit = submitCustom;
+    customRow.append(customInput);
+    customRow.append(customAdd);
+    points.append(customRow);
+    main.append(section('Points', points));
 
     const weaponGroup = (name, list) => {
       const details = node('details', 'cz-group');
@@ -412,6 +450,42 @@
   }
   window.addEventListener('keydown', onShortcut, { capture: true, passive: false });
 
+  function onMoneyKey(event) {
+    if (!moneyInput || document.activeElement !== moneyInput) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    const key = event.key;
+    const value = moneyInput.value;
+    const start = moneyInput.selectionStart;
+    const end = moneyInput.selectionEnd;
+    if (key === 'Enter') { moneySubmit?.(); return; }
+    if (key === 'Escape' || key === 'Tab') { moneyInput.blur(); return; }
+    if (key === 'Backspace') {
+      if (start === end && start > 0) moneyInput.setRangeText('', start - 1, end, 'end');
+      else moneyInput.setRangeText('', start, end, 'end');
+      return;
+    }
+    if (key === 'Delete') {
+      if (start === end) moneyInput.setRangeText('', start, end + 1, 'end');
+      else moneyInput.setRangeText('', start, end, 'end');
+      return;
+    }
+    if (key === 'ArrowLeft') { const p = Math.max(0, Math.min(start, end) - 1); moneyInput.setSelectionRange(p, p); return; }
+    if (key === 'ArrowRight') { const p = Math.min(value.length, Math.max(start, end) + 1); moneyInput.setSelectionRange(p, p); return; }
+    if (key === 'Home') { moneyInput.setSelectionRange(0, 0); return; }
+    if (key === 'End') { moneyInput.setSelectionRange(value.length, value.length); return; }
+    if (key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey)
+      moneyInput.setRangeText(key, start, end, 'end');
+  }
+  window.addEventListener('keydown', onMoneyKey, { capture: true, passive: false });
+
+  function onMoneyMouse(event) {
+    if (!moneyInput || event.target !== moneyInput) return;
+    event.stopPropagation();
+    setTimeout(() => { if (moneyInput) moneyInput.focus(); }, 0);
+  }
+  window.addEventListener('mousedown', onMoneyMouse, true);
+
   const api = {
     __direct: true, version: VERSION,
     run,
@@ -425,6 +499,8 @@
       if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
       hidePanel();
       window.removeEventListener('keydown', onShortcut, true);
+      window.removeEventListener('keydown', onMoneyKey, true);
+      window.removeEventListener('mousedown', onMoneyMouse, true);
       toastBox?.remove();
       toastBox = null;
       delete globalThis.ClownzMenu;
