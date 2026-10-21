@@ -19,7 +19,7 @@ One JavaScript file, pasted into your browser's developer console, adds a full i
 | Section | Features |
 | --- | --- |
 | **Player** | Toggle God Mode, Toggle No Clip, Respawn, Drop to Menu |
-| **Points** | +500 / +1,000 / +5,000 / +10,000 / +50,000 / +100,000, and negative amounts |
+| **Points** | +500 / +1,000 / +5,000 / +10,000 / +50,000 / +100,000, negative amounts, or type any custom amount in the box (press Enter or click Add) |
 | **Weapons** | All 28 wall weapons, 7 wonder weapons (Ray Gun, Wunderwaffe, DG-3, Ray Gun Mk2…), 24 Pack-a-Punched weapons — via the game's `give <id>` command with IDs from NZ:P's QuakeC |
 | **Power-Ups** | Spawn any of the 8 power-ups (Nuke, Insta-Kill, Double Points, Carpenter, Max Ammo, Free Perk, Upgrade Weapon, Bonus Points) or a random one, right in front of you |
 | **Damage** | Bullet damage x1 / x2 / x5 / x10 (`sv_tracedmgmultiplier`) |
